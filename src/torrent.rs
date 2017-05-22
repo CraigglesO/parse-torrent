@@ -1,28 +1,32 @@
 #![allow(dead_code)]
 #![feature(proc_macro)] // Rust nightly
 extern crate serde_bencode;
+// extern crate bincode;
 extern crate serde;
+extern crate sha1;
 
+use std;
 use std::fs;
 use std::path::Path;
-use self::serde_bencode::decoder;
+use self::serde_bencode::{encoder, decoder};
 use std::io::{self, Read};
 use self::serde::bytes::ByteBuf;
 
 #[derive(Debug, Deserialize)]
-pub struct Node(String, u64);
-
-#[derive(Debug, Deserialize)]
 pub struct File {
+    #[serde(default)]
     name: String,
+    #[serde(default)]
     path: String,
+    #[serde(default)]
     length: u64,
+    #[serde(default)]
     offset: u64,
     #[serde(default)]
     md5sum: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Info {
     #[serde(default)]
     name: String,
@@ -34,9 +38,6 @@ pub struct Info {
     length: u64,
     #[serde(default)]
     private: u8,
-    // #[serde(default)]
-    // #[serde(rename="root hash")]
-    // root_hash: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -89,18 +90,16 @@ pub struct Torrent {
 pub enum LoadFileError {
   Io(io::Error),
   DecodeError(serde_bencode::error::BencodeError),
-  UpdateTorrentError(UpdateTorrentError),
 }
 
 #[derive(Debug)]
 pub enum FromBufferError {
   DecodeError(serde_bencode::error::BencodeError),
-  ReadError,
 }
 
 #[derive(Debug)]
-pub enum UpdateTorrentError {
-
+pub enum FromStringError {
+    DecodeError(serde_bencode::error::BencodeError),
 }
 
 impl Torrent {
@@ -113,7 +112,7 @@ impl Torrent {
         let mut buffer: Vec<u8> = Vec::new();
         match f.read_to_end(&mut buffer) {
             Ok(_) => {
-                let mut torrent = decoder::from_bytes::<Torrent>(&buffer).unwrap();
+                let mut torrent = Torrent::from_buffer(&buffer).unwrap();
                 torrent.update_torrent();
                 Ok(torrent)
             },
@@ -125,6 +124,13 @@ impl Torrent {
         match decoder::from_bytes::<Torrent>(&buffer) {
             Ok(t) => Ok(t),
             Err(e) => Err(FromBufferError::DecodeError(e)),
+        }
+    }
+
+    pub fn from_string(string: &str) -> Result<Torrent, FromStringError> {
+        match decoder::from_str::<Torrent>(&string) {
+            Ok(t) => Ok(t),
+            Err(e) => Err(FromStringError::DecodeError(e)),
         }
     }
 
@@ -153,6 +159,24 @@ impl Torrent {
                 md5sum: String::new(),
             }];
         }
+        // let s = match std::str::from_utf8(&self.info.pieces) {
+        //     Ok(v) => v,
+        //     Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
+        // };
+        // let bytes = bincode::serde::serialize(&self.info.pieces);
+        // println!("pieces: {:?}", bytes);
+
+        // // ENCODE INFO:
+        // let pieces = &self.info;
+        // let mut e = encoder::Encoder::new();
+        // pieces.serialize(&mut e).unwrap();
+        // // CREATE A SHA1:
+        // let mut sha = sha1::Sha1::new();
+        // let sha = String::from_utf8(self.info.pieces).unwrap();
+        // sha.update(String::from_utf8(e.into()).unwrap());
+        // let sha = sha.digest().to_string();
+        // println!("sha1: {:?}", sha);
+
     }
 }
 
