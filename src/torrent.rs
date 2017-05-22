@@ -207,5 +207,3 @@ fn sha1sync(v: &[u8]) -> String {
     hasher.input(v);
     hasher.result_str()
 }
-
-// info_buffer: b"", info_hash: "", info_hash_buffer: b""
