@@ -1,16 +1,18 @@
 #![allow(dead_code)]
 #![feature(proc_macro)] // Rust nightly
 extern crate serde_bencode;
-// extern crate bincode;
 extern crate serde;
-extern crate sha1;
+extern crate crypto;
 
-use std;
 use std::fs;
 use std::path::Path;
-use self::serde_bencode::{encoder, decoder};
+use self::serde_bencode::decoder;
 use std::io::{self, Read};
 use self::serde::bytes::ByteBuf;
+use bencode::encode;
+
+use self::crypto::digest::Digest;
+use self::crypto::sha1::Sha1;
 
 #[derive(Debug, Deserialize)]
 pub struct File {
@@ -26,8 +28,10 @@ pub struct File {
     md5sum: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Info {
+    #[serde(default)]
+    length: u64,
     #[serde(default)]
     name: String,
     #[serde(default)]
@@ -35,8 +39,16 @@ pub struct Info {
     #[serde(rename="piece length")]
     piece_length: u64,
     #[serde(default)]
+    private: u8,
+}
+
+#[derive(RustcEncodable, Serialize)]
+pub struct InfoBuf {
     length: u64,
-    #[serde(default)]
+    name: String,
+    pieces: Vec<u8>,
+    #[serde(rename="piece length")]
+    piece_length: u64,
     private: u8,
 }
 
@@ -45,13 +57,13 @@ pub struct Torrent {
     info: Info,
     #[serde(default)]
     #[serde(rename="infoBuffer")]
-    info_buffer: ByteBuf,
+    info_buffer: Vec<u8>,
     #[serde(default)]
     #[serde(rename="infoHash")]
     info_hash: String,
     #[serde(default)]
     #[serde(rename="infoHashBuffer")]
-    info_hash_buffer: ByteBuf,
+    info_hash_buffer: Vec<u8>,
     #[serde(default)]
     name: String,
     #[serde(default)]
@@ -75,7 +87,7 @@ pub struct Torrent {
     #[serde(default)]
     length: u64,
     #[serde(default)]
-    pieces: Vec<String>,
+    pieces: Vec<Vec<u8>>,
     #[serde(default)]
     #[serde(rename="lastPieceLength")]
     last_piece_length: u64,
@@ -159,26 +171,33 @@ impl Torrent {
                 md5sum: String::new(),
             }];
         }
-        // let s = match std::str::from_utf8(&self.info.pieces) {
-        //     Ok(v) => v,
-        //     Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
-        // };
-        // let bytes = bincode::serde::serialize(&self.info.pieces);
-        // println!("pieces: {:?}", bytes);
+
+        if self.pieces.len() == 0 {
+            let pieces: Vec<u8> = self.info.pieces.clone().into();
+            for x in pieces.chunks(20) {
+                self.pieces.push(x.to_vec());
+            }
+        }
 
         // // ENCODE INFO:
-        // let pieces = &self.info;
-        // let mut e = encoder::Encoder::new();
-        // pieces.serialize(&mut e).unwrap();
-        // // CREATE A SHA1:
-        // let mut sha = sha1::Sha1::new();
-        // let sha = String::from_utf8(self.info.pieces).unwrap();
-        // sha.update(String::from_utf8(e.into()).unwrap());
-        // let sha = sha.digest().to_string();
-        // println!("sha1: {:?}", sha);
+        let info_buffer = InfoBuf {
+            length: self.info.length,
+            name: self.info.name.clone(),
+            pieces: self.info.pieces.clone().into(),
+            piece_length: self.info.piece_length,
+            private: self.info.private,
+        };
+        self.info_buffer = encode(&info_buffer).unwrap();
+        // println!("infoBUFER: {:?}", self.info_buffer);
+        self.info_hash = sha1sync(&self.info_buffer);
 
     }
 }
 
+fn sha1sync(v: &[u8]) -> String {
+    let mut hasher = Sha1::new();
+    hasher.input(v);
+    hasher.result_str()
+}
+
 // info_buffer: b"", info_hash: "", info_hash_buffer: b""
-// pieces...
