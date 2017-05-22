@@ -3,16 +3,21 @@
 extern crate serde_bencode;
 extern crate serde;
 extern crate crypto;
+extern crate bencode;
 
 use std::fs;
 use std::path::Path;
 use self::serde_bencode::decoder;
 use std::io::{self, Read};
 use self::serde::bytes::ByteBuf;
-use bencode::encode;
 
 use self::crypto::digest::Digest;
 use self::crypto::sha1::Sha1;
+
+use std::collections::BTreeMap;
+
+use self::bencode::{Bencode, ToBencode};
+use self::bencode::util::ByteString;
 
 #[derive(Debug, Deserialize)]
 pub struct File {
@@ -28,7 +33,7 @@ pub struct File {
     md5sum: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Info {
     #[serde(default)]
     length: u64,
@@ -100,13 +105,13 @@ pub struct Torrent {
 
 #[derive(Debug)]
 pub enum LoadFileError {
-  Io(io::Error),
-  DecodeError(serde_bencode::error::BencodeError),
+    Io(io::Error),
+    DecodeError(serde_bencode::error::BencodeError),
 }
 
 #[derive(Debug)]
 pub enum FromBufferError {
-  DecodeError(serde_bencode::error::BencodeError),
+    DecodeError(serde_bencode::error::BencodeError),
 }
 
 #[derive(Debug)]
@@ -179,18 +184,21 @@ impl Torrent {
             }
         }
 
-        // // ENCODE INFO:
-        let info_buffer = InfoBuf {
-            length: self.info.length,
-            name: self.info.name.clone(),
-            pieces: self.info.pieces.clone().into(),
-            piece_length: self.info.piece_length,
-            private: self.info.private,
-        };
-        self.info_buffer = encode(&info_buffer).unwrap();
-        // println!("infoBUFER: {:?}", self.info_buffer);
+        let bencode: bencode::Bencode = self.to_bencode();
+        self.info_buffer = bencode.to_bytes().unwrap();
         self.info_hash = sha1sync(&self.info_buffer);
+    }
+}
 
+impl ToBencode for Torrent {
+    fn to_bencode(&self) -> bencode::Bencode {
+        let mut m = BTreeMap::new();
+        m.insert(ByteString::from_str("length"), self.info.length.to_bencode());
+        m.insert(ByteString::from_str("name"), self.info.name.to_bencode());
+        m.insert(ByteString::from_str("pieces"), Bencode::ByteString(self.info.pieces.clone().into()));
+        m.insert(ByteString::from_str("piece length"), self.info.piece_length.to_bencode());
+        m.insert(ByteString::from_str("private"), self.info.private.to_bencode());
+        Bencode::Dict(m)
     }
 }
 

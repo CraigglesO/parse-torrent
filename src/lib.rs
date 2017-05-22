@@ -5,7 +5,7 @@
 extern crate test;
 #[macro_use]
 extern crate serde_derive;
-extern crate bencode;
+extern crate serde_bytes;
 extern crate rustc_serialize;
 
 mod torrent;
