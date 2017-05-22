@@ -1,6 +1,6 @@
 [package]
 name = "parse_torrent"
-version = "0.5.0"
+version = "0.5.2"
 description = "Parse Bittorent .torrent files into usable structs"
 authors = ["craig OConnor <oconnorct1@gmail.com>"]
 repository = "https://github.com/CraigglesO/parse-torrent"
@@ -16,4 +16,4 @@ rust-crypto = "0.2.36"
 rustc-serialize = "0.3"
 serde_bytes = "0.10.0"
 sha1 = "0.2.0"
-bencode = { git = "https://github.com/arjantop/rust-bencode" }
+bencode = "0.1.16"
