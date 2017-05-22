@@ -16,6 +16,4 @@ rust-crypto = "0.2.36"
 rustc-serialize = "0.3"
 serde_bytes = "0.10.0"
 sha1 = "0.2.0"
-
-[dependencies.bencode]
-git = "https://github.com/arjantop/rust-bencode"
+bencode = { git = "https://github.com/arjantop/rust-bencode" }
