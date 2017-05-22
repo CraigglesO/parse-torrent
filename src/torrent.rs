@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 #![feature(proc_macro)] // Rust nightly
 extern crate serde_bencode;
 extern crate serde;
