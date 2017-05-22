@@ -1,11 +1,8 @@
 #![allow(dead_code)]
+#![feature(proc_macro)] // Rust nightly
+#[macro_use]
+extern crate serde_derive;
+
 mod torrent;
 
 pub use torrent::{Torrent};
-
-macro_rules! try_case (
-  ($t:ident, $ex:expr, $err:ident) => (match $ex {
-    &$t(ref x) => x,
-    _          => return Err($err),
-  })
-);

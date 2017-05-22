@@ -1,91 +1,106 @@
 #![allow(dead_code)]
-extern crate chrono;
-extern crate bencode;
-extern crate rustc_serialize;
+#![feature(proc_macro)] // Rust nightly
+extern crate serde_bencode;
+extern crate serde;
 
 use std::fs;
 use std::path::Path;
-use std::io;
-use std::io::Read;
+use self::serde_bencode::decoder;
+use std::io::{self, Read};
+use self::serde::bytes::ByteBuf;
 
-use self::chrono::prelude::*;
-use self::bencode::util::ByteString;
-use self::bencode::{Bencode, ListVec, FromBencode, Decoder, NumFromBencodeError, StringFromBencodeError};
-use self::bencode::Bencode::{Number, List, Dict};
-use self::rustc_serialize::Decodable;
+#[derive(Debug, Deserialize)]
+pub struct Node(String, u64);
 
-// use hash::{Sha1Hash, InvalidHashLength};
-
-/// STRUCTS
-
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct File {
-    path:   String,
-    name:   String,
+    name: String,
+    path: String,
     length: u64,
     offset: u64,
+    #[serde(default)]
+    md5sum: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Info {
-    length:       u64,
-    name:         Vec<u8>,
-    piece_length: u32,
-    pieces:       Vec<u8>,
-    private:      bool,
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    pieces: ByteBuf,
+    #[serde(rename="piece length")]
+    piece_length: u64,
+    #[serde(default)]
+    length: u64,
+    #[serde(default)]
+    private: u8,
+    // #[serde(default)]
+    // #[serde(rename="root hash")]
+    // root_hash: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct Torrent {
-    // info:              Info,
-    // info_buffer:       Vec<u8>,
-    // info_hash:         String,
-    // info_hash_buffer:  Vec<u8>,
-    // name:              String,
-    // private:           bool,
-    // creation_date:     DateTime<UTC>,
-    // created_by:        String,
-    announce:          Vec<Vec<String>>,
-    // url_list:          Vec<String>,
-    // files:             Vec<File>,
-    // length:            u64,
-    piece_length:      u32,
-    // last_piece_length: u32,
-    // pieces:            Vec<String>,
-}
-
-/// ERRORS
-
-#[derive(Debug)]
-pub enum TorrentBencodeError {
-    DecodeError,
-    NotDecodable,
-    LengthNotANumber(NumFromBencodeError),
-    DoesntContainLength,
-    AnnounceNotAString(StringFromBencodeError),
-    DoesntContainAnnounce,
-    PieceLengthNotANumber(NumFromBencodeError),
-    DoesntContainPieceLength,
-    // BoolFromBencodeError,
-    // CharFromBencodeError,
-    // FloatFromBencodeError,
-    // MapFromBencodeError,
-    // NumFromBencodeError,
-    // StringFromBencodeError,
-    // VecFromBencodeError,
+    info: Info,
+    #[serde(default)]
+    #[serde(rename="infoBuffer")]
+    info_buffer: ByteBuf,
+    #[serde(default)]
+    #[serde(rename="infoHash")]
+    info_hash: String,
+    #[serde(default)]
+    #[serde(rename="infoHashBuffer")]
+    info_hash_buffer: ByteBuf,
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    announce: String,
+    #[serde(default)]
+    #[serde(rename="announce-list")]
+    announce_list: Vec<Vec<String>>,
+    #[serde(default)]
+    #[serde(rename="creation date")]
+    creation_date: u64,
+    #[serde(default)]
+    comment: String,
+    #[serde(default)]
+    #[serde(rename="created by")]
+    created_by: String,
+    #[serde(default)]
+    #[serde(rename="urlList")]
+    url_list: String,
+    #[serde(default)]
+    private: bool,
+    #[serde(default)]
+    length: u64,
+    #[serde(default)]
+    pieces: Vec<String>,
+    #[serde(default)]
+    #[serde(rename="lastPieceLength")]
+    last_piece_length: u64,
+    #[serde(default)]
+    #[serde(rename="piece length")]
+    piece_length: u64,
+    #[serde(default)]
+    files: Vec<File>,
 }
 
 #[derive(Debug)]
 pub enum LoadFileError {
   Io(io::Error),
-  FromBencode(FromBufferError),
+  DecodeError(serde_bencode::error::BencodeError),
+  UpdateTorrentError(UpdateTorrentError),
 }
 
 #[derive(Debug)]
 pub enum FromBufferError {
-  InvalidBencode(bencode::streaming::Error),
-  DecodeError(bencode::DecoderError),
-  FromBencode(TorrentBencodeError),
+  DecodeError(serde_bencode::error::BencodeError),
+  ReadError,
+}
+
+#[derive(Debug)]
+pub enum UpdateTorrentError {
+
 }
 
 impl Torrent {
@@ -97,48 +112,49 @@ impl Torrent {
         };
         let mut buffer: Vec<u8> = Vec::new();
         match f.read_to_end(&mut buffer) {
-            Ok(_) => (),
-            Err(e) => return Err(LoadFileError::Io(e)),
-        };
-        Torrent::from_buffer(&buffer).map_err(LoadFileError::FromBencode)
+            Ok(_) => {
+                let mut torrent = decoder::from_bytes::<Torrent>(&buffer).unwrap();
+                torrent.update_torrent();
+                Ok(torrent)
+            },
+            Err(e) => Err(LoadFileError::Io(e)),
+        }
     }
 
     pub fn from_buffer(buffer: &[u8]) -> Result<Torrent, FromBufferError> {
-        let bencode = match bencode::from_buffer(buffer) {
-            Ok(b)   => b,
-            Err(e)  => return Err(FromBufferError::InvalidBencode(e)),
-        };
-        // println!("{:?}", bencode);
-        FromBencode::from_bencode(&bencode).map_err(FromBufferError::FromBencode)
+        match decoder::from_bytes::<Torrent>(&buffer) {
+            Ok(t) => Ok(t),
+            Err(e) => Err(FromBufferError::DecodeError(e)),
+        }
+    }
+
+    pub fn update_torrent(&mut self) {
+        if self.name == "" {
+            self.name = self.info.name.clone();
+        }
+        if self.length == 0 {
+            self.length = self.info.length;
+        }
+        if self.piece_length == 0 {
+            self.piece_length = self.info.piece_length;
+        }
+        if self.last_piece_length == 0 {
+            self.last_piece_length = self.length % self.piece_length;
+        }
+        if self.files.len() == 0 {
+            let mut path: String = "./".to_string();
+            path.push_str(&self.info.name);
+
+            self.files = vec![File {
+                name: self.info.name.clone(),
+                path: path,
+                length: self.length,
+                offset: 0,
+                md5sum: String::new(),
+            }];
+        }
     }
 }
 
-impl FromBencode for Torrent {
-    type Err = TorrentBencodeError;
-
-    fn from_bencode(bencode: &Bencode) -> Result<Torrent, TorrentBencodeError> {
-        use self::TorrentBencodeError::*;
-
-        // Anounce
-        let mut announce: Vec<Vec<String>> = Vec::new();
-        let mut piece_length: u32 = 0;
-        match bencode {
-            &Bencode::Dict(ref d) => {
-                match d.get(&ByteString::from_str("announce")) {
-                    Some(s) => FromBencode::from_bencode(s).map(|s| {
-                        announce.push(vec![s]);
-                    }).map_err(AnnounceNotAString),
-                    _ => Err(DoesntContainAnnounce),
-                }
-            },
-            &Bencode::List(ref l) => {
-                l.iter()
-            },
-            None => Err(NotDecodable),
-        };
-        Ok(Torrent{
-            announce:     announce,
-            piece_length: piece_length,
-        })
-    }
-}
+// info_buffer: b"", info_hash: "", info_hash_buffer: b""
+// pieces...
