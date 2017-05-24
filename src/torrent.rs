@@ -46,7 +46,7 @@ pub struct Info {
     private: u8,
 }
 
-#[derive(RustcEncodable, Serialize)]
+#[derive(Serialize)]
 pub struct InfoBuf {
     length: u64,
     name: String,
