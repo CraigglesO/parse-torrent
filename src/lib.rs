@@ -1,8 +1,5 @@
 #![allow(dead_code)]
-#![feature(proc_macro)] // Rust nightly
-#![feature(test)]
 
-extern crate test;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_bytes;

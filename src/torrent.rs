@@ -1,4 +1,3 @@
-#![feature(proc_macro)] // Rust nightly
 extern crate serde_bencode;
 extern crate serde;
 extern crate crypto;
@@ -6,9 +5,8 @@ extern crate bencode;
 
 use std::fs;
 use std::path::Path;
-use self::serde_bencode::decoder;
+use self::serde_bencode::de;
 use std::io::{self, Read};
-use self::serde::bytes::ByteBuf;
 
 use self::crypto::digest::Digest;
 use self::crypto::sha1::Sha1;
@@ -17,6 +15,7 @@ use std::collections::BTreeMap;
 
 use self::bencode::{Bencode, ToBencode};
 use self::bencode::util::ByteString;
+use serde_bytes::ByteBuf;
 
 #[derive(Debug, Deserialize)]
 pub struct File {
@@ -105,17 +104,17 @@ pub struct Torrent {
 #[derive(Debug)]
 pub enum LoadFileError {
     Io(io::Error),
-    DecodeError(serde_bencode::error::BencodeError),
+    DecodeError(serde_bencode::error::Error),
 }
 
 #[derive(Debug)]
 pub enum FromBufferError {
-    DecodeError(serde_bencode::error::BencodeError),
+    DecodeError(serde_bencode::error::Error),
 }
 
 #[derive(Debug)]
 pub enum FromStringError {
-    DecodeError(serde_bencode::error::BencodeError),
+    DecodeError(serde_bencode::error::Error),
 }
 
 impl Torrent {
@@ -137,14 +136,14 @@ impl Torrent {
     }
 
     pub fn from_buffer(buffer: &[u8]) -> Result<Torrent, FromBufferError> {
-        match decoder::from_bytes::<Torrent>(&buffer) {
+        match de::from_bytes::<Torrent>(&buffer) {
             Ok(t) => Ok(t),
             Err(e) => Err(FromBufferError::DecodeError(e)),
         }
     }
 
     pub fn from_string(string: &str) -> Result<Torrent, FromStringError> {
-        match decoder::from_str::<Torrent>(&string) {
+        match de::from_str::<Torrent>(&string) {
             Ok(t) => Ok(t),
             Err(e) => Err(FromStringError::DecodeError(e)),
         }
