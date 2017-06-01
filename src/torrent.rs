@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::Path;
 use std::io::{self, Read};
+use std::collections::BTreeMap;
 
 use bencode::{Bencode, ToBencode};
 use bencode::util::ByteString;
@@ -12,8 +13,6 @@ use serde_bytes;
 
 use crypto::digest::Digest;
 use crypto::sha1::Sha1;
-
-use std::collections::BTreeMap;
 
 #[derive(Debug, Deserialize)]
 pub struct File {
