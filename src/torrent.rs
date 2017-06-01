@@ -175,8 +175,7 @@ impl Torrent {
         }
 
         if self.pieces.len() == 0 {
-            let pieces: Vec<u8> = self.info.pieces.clone().into();
-            for x in pieces.chunks(20) {
+            for x in self.info.pieces.chunks(20) {
                 self.pieces.push(x.to_vec());
             }
         }
