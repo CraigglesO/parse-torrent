@@ -1,21 +1,19 @@
-extern crate serde_bencode;
-extern crate serde;
-extern crate crypto;
-extern crate bencode;
-extern crate serde_bytes;
-
 use std::fs;
 use std::path::Path;
-use self::serde_bencode::de;
 use std::io::{self, Read};
 
-use self::crypto::digest::Digest;
-use self::crypto::sha1::Sha1;
+use bencode::{Bencode, ToBencode};
+use bencode::util::ByteString;
+
+use serde_bencode;
+use serde_bencode::de;
+
+use serde_bytes;
+
+use crypto::digest::Digest;
+use crypto::sha1::Sha1;
 
 use std::collections::BTreeMap;
-
-use self::bencode::{Bencode, ToBencode};
-use self::bencode::util::ByteString;
 
 #[derive(Debug, Deserialize)]
 pub struct File {
@@ -183,14 +181,14 @@ impl Torrent {
             }
         }
 
-        let bencode: bencode::Bencode = self.to_bencode();
+        let bencode: Bencode = self.to_bencode();
         self.info_buffer = bencode.to_bytes().unwrap();
         self.info_hash = sha1sync(&self.info_buffer);
     }
 }
 
 impl ToBencode for Torrent {
-    fn to_bencode(&self) -> bencode::Bencode {
+    fn to_bencode(&self) -> Bencode {
         let mut m = BTreeMap::new();
         m.insert(ByteString::from_str("length"), self.info.length.to_bencode());
         m.insert(ByteString::from_str("name"), self.info.name.to_bencode());

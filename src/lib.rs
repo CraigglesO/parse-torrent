@@ -1,8 +1,12 @@
 #![allow(dead_code)]
 
+extern crate bencode;
+extern crate crypto;
+extern crate serde;
+extern crate serde_bencode;
+extern crate serde_bytes;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_bytes;
 
 mod torrent;
 
