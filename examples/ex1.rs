@@ -4,6 +4,6 @@ use parse_torrent::Torrent;
 
 /// cargo run --example ex1
 fn main() {
-    let test = Torrent::from_file("screen.torrent");
+    let test = Torrent::from_file("screen.torrent").unwrap();
     println!("test: {:?}", test);
 }

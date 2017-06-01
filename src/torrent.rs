@@ -2,6 +2,7 @@ extern crate serde_bencode;
 extern crate serde;
 extern crate crypto;
 extern crate bencode;
+extern crate serde_bytes;
 
 use std::fs;
 use std::path::Path;
@@ -15,7 +16,6 @@ use std::collections::BTreeMap;
 
 use self::bencode::{Bencode, ToBencode};
 use self::bencode::util::ByteString;
-use serde_bytes::ByteBuf;
 
 #[derive(Debug, Deserialize)]
 pub struct File {
@@ -38,7 +38,8 @@ pub struct Info {
     #[serde(default)]
     name: String,
     #[serde(default)]
-    pieces: ByteBuf,
+    #[serde(with = "serde_bytes")]
+    pieces: Vec<u8>,
     #[serde(rename="piece length")]
     piece_length: u64,
     #[serde(default)]
