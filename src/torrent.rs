@@ -55,48 +55,48 @@ pub struct InfoBuf {
 
 #[derive(Debug, Deserialize)]
 pub struct Torrent {
-    info: Info,
+    pub info: Info,
     #[serde(default)]
     #[serde(rename="infoBuffer")]
-    info_buffer: Vec<u8>,
+    pub info_buffer: Vec<u8>,
     #[serde(default)]
     #[serde(rename="infoHash")]
-    info_hash: String,
+    pub info_hash: String,
     #[serde(default)]
     #[serde(rename="infoHashBuffer")]
-    info_hash_buffer: Vec<u8>,
+    pub info_hash_buffer: Vec<u8>,
     #[serde(default)]
-    name: String,
+    pub name: String,
     #[serde(default)]
-    announce: String,
+    pub announce: String,
     #[serde(default)]
     #[serde(rename="announce-list")]
-    announce_list: Vec<Vec<String>>,
+    pub announce_list: Vec<Vec<String>>,
     #[serde(default)]
     #[serde(rename="creation date")]
-    creation_date: u64,
+    pub creation_date: u64,
     #[serde(default)]
-    comment: String,
+    pub comment: String,
     #[serde(default)]
     #[serde(rename="created by")]
-    created_by: String,
+    pub created_by: String,
     #[serde(default)]
     #[serde(rename="urlList")]
-    url_list: String,
+    pub url_list: String,
     #[serde(default)]
-    private: bool,
+    pub private: bool,
     #[serde(default)]
-    length: u64,
+    pub length: u64,
     #[serde(default)]
-    pieces: Vec<Vec<u8>>,
+    pub pieces: Vec<Vec<u8>>,
     #[serde(default)]
     #[serde(rename="lastPieceLength")]
-    last_piece_length: u64,
+    pub last_piece_length: u64,
     #[serde(default)]
     #[serde(rename="piece length")]
-    piece_length: u64,
+    pub piece_length: u64,
     #[serde(default)]
-    files: Vec<File>,
+    pub files: Vec<File>,
 }
 
 #[derive(Debug)]
